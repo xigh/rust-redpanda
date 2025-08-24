@@ -62,7 +62,21 @@ async fn main() -> Result<()> {
                         if let Some(payload) = borrowed_message.payload() {
                             match MessageHandler::deserialize_message(payload, data_format) {
                                 Ok((username, message)) => {
-                                    println!("{}: {}", username, message);
+                                    // Format timestamp nicely
+                                    let timestamp_str = match borrowed_message.timestamp() {
+                                        rdkafka::Timestamp::CreateTime(ts) => {
+                                            chrono::DateTime::from_timestamp_millis(ts).unwrap_or_default()
+                                                .format("%H:%M:%S")
+                                                .to_string()
+                                        }
+                                        rdkafka::Timestamp::LogAppendTime(ts) => {
+                                            chrono::DateTime::from_timestamp_millis(ts).unwrap_or_default()
+                                                .format("%H:%M:%S")
+                                                .to_string()
+                                        }
+                                        rdkafka::Timestamp::NotAvailable => "N/A".to_string(),
+                                    };
+                                    println!("[{}] {}: {}", timestamp_str, username, message);
                                 }
                                 Err(e) => {
                                     eprintln!("Failed to deserialize message: {}", e);
