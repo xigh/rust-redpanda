@@ -1,10 +1,11 @@
 mod args;
+mod message;
 
 use args::Args;
 use clap::Parser;
 use rdkafka::config::ClientConfig;
 use rdkafka::consumer::{Consumer, StreamConsumer};
-use rdkafka::message::Message;
+use rdkafka::message::Message as KafkaMessage;
 use rdkafka::producer::{FutureProducer, FutureRecord};
 use std::io;
 use std::sync::Arc;
@@ -12,6 +13,7 @@ use std::thread;
 use tokio::runtime::Runtime;
 use futures_util::StreamExt;
 use anyhow::Result;
+use message::MessageHandler;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -21,7 +23,8 @@ async fn main() -> Result<()> {
     // Get configuration from args
     let bootstrap_servers = &args.bootstrap_servers;
     let topic = &args.topic;
-    let group_id = format!("chat-group-{}", chrono::Utc::now().timestamp());  // Unique group ID to see all messages
+    let group_id = format!("chat-group-{}", chrono::Utc::now().timestamp());
+    let data_format = args.format;
 
     // Get username (from args or interactively)
     let username = match args.username {
@@ -57,8 +60,14 @@ async fn main() -> Result<()> {
                 match result {
                     Ok(borrowed_message) => {
                         if let Some(payload) = borrowed_message.payload() {
-                            let msg = String::from_utf8_lossy(payload);
-                            println!("{}", msg);
+                            match MessageHandler::deserialize_message(payload, data_format) {
+                                Ok((username, message)) => {
+                                    println!("{}: {}", username, message);
+                                }
+                                Err(e) => {
+                                    eprintln!("Failed to deserialize message: {}", e);
+                                }
+                            }
                         }
                     }
                     Err(e) => println!("Consumption error: {}", e),
@@ -76,11 +85,20 @@ async fn main() -> Result<()> {
         rt.block_on(async {
             let stdin = io::stdin();
             for line in stdin.lines() {
-                let message = format!("{}: {}", *username_clone, line.unwrap());
-                let record = FutureRecord::to(&topic_clone)
-                    .payload(message.as_bytes())
-                    .key(b"key");  // Optional key
-                producer_clone.send(record, None).await.expect("Send error");
+                let message_text = line.unwrap();
+                match MessageHandler::serialize_message(&username_clone, &message_text, data_format) {
+                    Ok(serialized_data) => {
+                        let record = FutureRecord::to(&topic_clone)
+                            .payload(&serialized_data)
+                            .key(b"key");
+                        if let Err(e) = producer_clone.send(record, None).await {
+                            eprintln!("Send error: {}", e.0);
+                        }
+                    }
+                    Err(e) => {
+                        eprintln!("Serialization error: {}", e);
+                    }
+                }
             }
         });
     });

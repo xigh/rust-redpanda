@@ -1,0 +1,9 @@
+syntax = "proto3";
+
+package chat;
+
+// Chat message definition
+message ChatMessage {
+  string username = 1;
+  string message = 2;
+}

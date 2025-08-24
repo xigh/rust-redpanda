@@ -101,7 +101,28 @@ red-panda-test % docker exec -it redpanda-1 rpk topic consume chat-room --broker
 
 ## TODO :
 
-- Send JSON / Protobuf messages
-- Update message content
-- Send messages to a specific user
-- Send messages to a specific topic
+- [X] Send JSON / Protobuf messages
+
+```bash
+red-panda-test % cargo r -- -u alice -f json
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.05s
+     Running `target/debug/red-panda-test -u alice -f json`
+coucou
+alice: coucou
+```
+
+```bash
+red-panda-test % docker exec -it redpanda-1 rpk topic consume chat-room --brokers localhost:9092
+{
+  "topic": "chat-room",
+  "key": "key",
+  "value": "{\"username\":\"alice\",\"message\":\"coucou\"}",
+  "timestamp": 1756053930760,
+  "partition": 0,
+  "offset": 12
+}
+```
+
+- [ ] Update message content
+- [ ] Send messages to a specific user
+- [ ] Send messages to a specific topic
