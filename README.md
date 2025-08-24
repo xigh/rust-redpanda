@@ -101,6 +101,7 @@ red-panda-test % docker exec -it redpanda-1 rpk topic consume chat-room --broker
 
 ## TODO :
 
-- Send JSON messages
+- Send JSON / Protobuf messages
+- Update message content
 - Send messages to a specific user
 - Send messages to a specific topic
