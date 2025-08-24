@@ -124,5 +124,64 @@ red-panda-test % docker exec -it redpanda-1 rpk topic consume chat-room --broker
 ```
 
 - [ ] Update message content
+
+Ok. It looks like we cannot update a message. Which is fine. 
+
 - [ ] Send messages to a specific user
 - [ ] Send messages to a specific topic
+
+## Notes
+
+### Understanding Kafka/Redpanda as a Log File
+
+Kafka and Redpanda can be thought of as **distributed log files** rather than traditional databases. This fundamental concept explains many of their behaviors:
+
+#### **Log File Analogy**
+
+Think of a topic as a **log file** where:
+
+- Each line is a **message** with a sequential **offset** (line number)
+- You can only **append** new lines at the end
+- You can **never modify** or **delete** existing lines
+- The file is **immutable** - once written, it's permanent
+
+#### **What You CAN Do**
+
+✅ **Append new messages** - Like adding lines to a log file  
+✅ **Read from any position** - Start reading from any offset  
+✅ **Read sequentially** - Process messages in order  
+✅ **Send tombstones** - Mark messages as "deleted" (but they still exist)  
+✅ **Use message metadata** - Timestamps, keys, etc.  
+
+#### **What You CANNOT Do**
+
+❌ **Modify existing messages** - Lines in a log file are immutable  
+❌ **Delete messages** - You can't remove lines from a log file  
+❌ **Reorder messages** - The sequence is fixed by offset  
+❌ **Update in place** - No "UPDATE" operations like in databases  
+
+#### **Practical Implications**
+
+**For Chat Applications:**
+
+- "Updating" a message = sending a new message with `replaces_offset`
+- "Deleting" a message = sending a new message with `delete_offset`
+- Clients must handle the logic of showing/hiding messages based on these metadata
+
+This is a bad design IMHO. I'll probably add a 'verb' field to the message to make it more clear.
+
+**For Data Processing:**
+
+- Perfect for event streaming and real-time analytics
+- Excellent for audit trails and data lineage
+- Great for decoupling systems (pub/sub pattern)
+
+#### **Why This Design?**
+
+This immutable log design provides:
+
+- **High performance** - Sequential writes are very fast
+- **Durability** - Data is never lost once written
+- **Scalability** - Easy to partition and distribute
+- **Replay capability** - Can replay events from any point in time
+- **Event sourcing** - Complete history of all events

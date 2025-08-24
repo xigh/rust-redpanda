@@ -6,4 +6,6 @@ package chat;
 message ChatMessage {
   string username = 1;
   string message = 2;
+  int64 replaces_offset = 3;  // Offset of the message this replaces (0 = new message)
+  int64 delete_offset = 4;    // Offset of the message to delete (0 = no deletion)
 }

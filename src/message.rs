@@ -13,6 +13,8 @@ use chat::ChatMessage;
 pub struct JsonMessage {
     pub username: String,
     pub message: String,
+    pub replaces_offset: Option<i64>,  // Offset of the message this replaces (None = new message)
+    pub delete_offset: Option<i64>,    // Offset of the message to delete (None = no deletion)
 }
 
 pub struct MessageHandler;
@@ -22,6 +24,8 @@ impl MessageHandler {
         username: &str,
         message: &str,
         format: DataFormat,
+        replaces_offset: Option<i64>,
+        delete_offset: Option<i64>,
     ) -> anyhow::Result<Vec<u8>> {
         match format {
             DataFormat::Text => {
@@ -32,6 +36,8 @@ impl MessageHandler {
                 let json_message = JsonMessage {
                     username: username.to_string(),
                     message: message.to_string(),
+                    replaces_offset,
+                    delete_offset,
                 };
                 let json_string = serde_json::to_string(&json_message)?;
                 Ok(json_string.into_bytes())
@@ -40,6 +46,8 @@ impl MessageHandler {
                 let proto_message = ChatMessage {
                     username: username.to_string(),
                     message: message.to_string(),
+                    replaces_offset: replaces_offset.unwrap_or(0),
+                    delete_offset: delete_offset.unwrap_or(0),
                 };
                 Ok(proto_message.encode_to_vec())
             }
